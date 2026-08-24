@@ -4,9 +4,9 @@
   "main": "worker/index.js",
   "compatibility_date": "2026-08-24",
   "vars": {
-    "OPENAI_BASE_URL": "https://aigw.asiainfo.com/v1",
-    "ENTERPRISE_MODEL": "wangsu/gpt-5.5",
-    "ANTHROPIC_BASE_URL": "https://aigw.asiainfo.com"
+    "MODEL_PROVIDER": "glm",
+    "MODEL_BASE_URL": "https://open.bigmodel.cn/api/coding/paas/v4",
+    "MODEL_NAME": "glm-5.2"
   },
   "assets": {
     "directory": "./ui",
