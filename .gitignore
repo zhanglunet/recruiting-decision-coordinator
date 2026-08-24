@@ -10,3 +10,4 @@ reviews/
 .coverage
 .pytest_cache/
 .wrangler/
+.dev.vars

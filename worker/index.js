@@ -21,6 +21,30 @@ async function readBody(request) {
   try { return await request.json(); } catch { return {}; }
 }
 
+async function enterpriseChat(env, messages) {
+  if (!env.ENTERPRISE_API_KEY) return null;
+  const base = String(env.OPENAI_BASE_URL || 'https://aigw.asiainfo.com/v1').replace(/\/$/, '');
+  const response = await fetch(`${base}/chat/completions`, {
+    method: 'POST',
+    headers: { accept: 'application/json', authorization: `Bearer ${env.ENTERPRISE_API_KEY}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ model: env.ENTERPRISE_MODEL || 'wangsu/gpt-5.5', messages, stream: false, temperature: 0.2 })
+  });
+  if (!response.ok) throw new Error(`enterprise_model_${response.status}`);
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) throw new Error('enterprise_model_empty');
+  return { content, model: data.model || env.ENTERPRISE_MODEL || 'wangsu/gpt-5.5' };
+}
+
+function parseModelJson(content) {
+  try { return JSON.parse(content); } catch {}
+  const fenced = String(content).match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenced) { try { return JSON.parse(fenced[1]); } catch {} }
+  return null;
+}
+
+const agentSystem = '你是招聘决策与协同助手。遵守：不自动淘汰或录用；不创造学校等级、权重或阈值；缺失证据标为待核证；输出必须可追溯、可解释，并明确结论效力、下一责任人和恢复入口。';
+
 function buildJd(input) {
   const raw = String(input.description || '').trim();
   const title = String(input.title || '').trim() || (raw.includes('架构') ? '数据架构师' : '待确认岗位');
@@ -54,8 +78,9 @@ function buildInterview(input) {
   ], nextOwner: '面试官记录岗位相关事实，招聘人员保留核证入口' };
 }
 
-async function api(request, url) {
+async function api(request, url, env) {
   if (request.method === 'GET' && url.pathname === '/api/health') return json({ ok: true, service: 'recruiting-decision-coordinator', version: '0.1.0-mvp' });
+  if (request.method === 'GET' && url.pathname === '/api/model-status') return json({ configured: Boolean(env.ENTERPRISE_API_KEY), provider: 'asiainfo-aigw', baseUrl: env.OPENAI_BASE_URL || 'https://aigw.asiainfo.com/v1', model: env.ENTERPRISE_MODEL || 'wangsu/gpt-5.5', secretName: 'ENTERPRISE_API_KEY' });
   if (request.method === 'GET' && url.pathname === '/api/overview') return json({ metrics: { openRoles: demoRoles.length, pendingCandidates: 86, weeklyInterviews: 18, pendingDecisions: 6 }, roles: demoRoles, candidates: demoCandidates, decisions: [
     { type: 'candidate', candidateId: 'candidate-linxiao', title: '林晓', meta: '数据架构师 · 匹配度 92%', action: '查看证据' },
     { type: 'role', title: '数据架构师', meta: 'JD 草稿 · 技术平台部', action: '审阅建议' },
@@ -64,16 +89,43 @@ async function api(request, url) {
   ] });
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   const body = await readBody(request);
-  if (url.pathname === '/api/jd') return json({ ok: true, result: buildJd(body), receipt: { kind: 'draft', createdAt: new Date().toISOString() } });
-  if (url.pathname === '/api/assess') return json({ ok: true, result: assessCandidate(body), receipt: { kind: 'evidence-assessment', createdAt: new Date().toISOString() } });
-  if (url.pathname === '/api/interview') return json({ ok: true, result: buildInterview(body), receipt: { kind: 'question-pack-draft', createdAt: new Date().toISOString() } });
+  if (url.pathname === '/api/jd') {
+    const fallback = buildJd(body);
+    try {
+      const model = await enterpriseChat(env, [{ role: 'system', content: `${agentSystem} 你负责岗位定义与渠道投影。只输出 JSON，不要 Markdown。字段：status,title,candidateSearchNames,objective,mustHave,trainable,preferred,channelProjection,risks,nextOwner。` }, { role: 'user', content: JSON.stringify(body) }]);
+      const result = model && parseModelJson(model.content);
+      if (result) return json({ ok: true, mode: 'model', model: model.model, result, receipt: { kind: 'draft', createdAt: new Date().toISOString() } });
+      if (model) fallback.modelNote = model.content;
+    } catch (error) { fallback.modelError = error.message; }
+    return json({ ok: true, mode: 'fallback', result: fallback, receipt: { kind: 'draft', createdAt: new Date().toISOString() } });
+  }
+  if (url.pathname === '/api/assess') {
+    const fallback = assessCandidate(body);
+    try {
+      const model = await enterpriseChat(env, [{ role: 'system', content: `${agentSystem} 你负责候选证据评估。只输出 JSON，不要 Markdown。字段：status,role,evidence,highlights,concerns,decisionEffect,nextOwner。evidence 是逐项记录数组，每项含 requirement,support,evidence,next。不要输出正式总分或淘汰结论。` }, { role: 'user', content: JSON.stringify(body) }]);
+      const result = model && parseModelJson(model.content);
+      if (result) return json({ ok: true, mode: 'model', model: model.model, result, receipt: { kind: 'evidence-assessment', createdAt: new Date().toISOString() } });
+      if (model) fallback.modelNote = model.content;
+    } catch (error) { fallback.modelError = error.message; }
+    return json({ ok: true, mode: 'fallback', result: fallback, receipt: { kind: 'evidence-assessment', createdAt: new Date().toISOString() } });
+  }
+  if (url.pathname === '/api/interview') {
+    const fallback = buildInterview(body);
+    try {
+      const model = await enterpriseChat(env, [{ role: 'system', content: `${agentSystem} 你负责结构化面试设计。只输出 JSON，不要 Markdown。字段：status,role,model,questions,nextOwner。questions 每项含 competency,question,followUps,observation。没有正式胜任力模型时必须写明建议观察点而非正式评分锚点。` }, { role: 'user', content: JSON.stringify(body) }]);
+      const result = model && parseModelJson(model.content);
+      if (result) return json({ ok: true, mode: 'model', model: model.model, result, receipt: { kind: 'question-pack-draft', createdAt: new Date().toISOString() } });
+      if (model) fallback.modelNote = model.content;
+    } catch (error) { fallback.modelError = error.message; }
+    return json({ ok: true, mode: 'fallback', result: fallback, receipt: { kind: 'question-pack-draft', createdAt: new Date().toISOString() } });
+  }
   return json({ error: 'not_found' }, 404);
 }
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith('/api/')) return api(request, url);
+    if (url.pathname.startsWith('/api/')) return api(request, url, env);
     return env.ASSETS.fetch(request);
   }
 };
