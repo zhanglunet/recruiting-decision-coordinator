@@ -47,3 +47,35 @@ document.querySelector('#export-btn').addEventListener('click',()=>showToast('�
 document.querySelectorAll('#create-role-btn,#create-role-btn-2').forEach(btn=>btn.addEventListener('click',()=>showToast('新建岗位流程已打开（演示）')));
 document.querySelector('#search-input').addEventListener('input',e=>{if(e.target.value.trim())showToast(`正在搜索“${e.target.value.trim()}”`)});
 renderDecisions();renderRoles();renderCandidates();
+
+async function callAgent(path, payload){
+  const response=await fetch(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+  if(!response.ok) throw new Error(`Agent API ${response.status}`);
+  return response.json();
+}
+async function loadOverview(){
+  try{
+    const response=await fetch('/api/overview');
+    if(!response.ok)return;
+    const data=await response.json();
+    document.querySelector('#metric-open-roles').textContent=data.metrics.openRoles;
+    document.querySelector('#metric-candidates').textContent=data.metrics.pendingCandidates;
+    document.querySelector('#metric-interviews').textContent=data.metrics.weeklyInterviews;
+    document.querySelector('#metric-decisions').textContent=data.metrics.pendingDecisions;
+    document.querySelector('.ai-status small').textContent='Agent API 已连接 · 刚刚同步';
+  }catch(error){ console.warn('overview API unavailable',error); }
+}
+function openJdModal(){document.querySelector('#jd-modal-backdrop').classList.add('open');document.querySelector('#jd-description-input').focus()}
+function closeJdModal(){document.querySelector('#jd-modal-backdrop').classList.remove('open')}
+document.querySelectorAll('#create-role-btn,#create-role-btn-2').forEach(btn=>btn.removeEventListener('click',()=>{}));
+document.querySelectorAll('#create-role-btn,#create-role-btn-2').forEach(btn=>btn.addEventListener('click',openJdModal));
+document.querySelector('#jd-modal-close').addEventListener('click',closeJdModal);document.querySelector('#jd-modal-cancel').addEventListener('click',closeJdModal);document.querySelector('#jd-modal-backdrop').addEventListener('click',e=>{if(e.target.id==='jd-modal-backdrop')closeJdModal()});
+document.querySelector('#jd-generate-btn').addEventListener('click',async()=>{
+  const button=document.querySelector('#jd-generate-btn');const result=document.querySelector('#jd-result');button.disabled=true;button.textContent='生成中…';
+  try{const data=await callAgent('/api/jd',{title:document.querySelector('#jd-title-input').value,description:document.querySelector('#jd-description-input').value});const jd=data.result;result.innerHTML=`<span class="result-status">${jd.status} · 草稿待确认</span><h3>${jd.title}</h3><p>${jd.objective}</p><strong>必要条件</strong><ul>${jd.mustHave.map(x=>`<li>${x}</li>`).join('')}</ul><strong>需确认</strong><p>${jd.risks.length?jd.risks.join('；'):'当前没有新增风险。'}</p><button class="outline-btn" id="copy-jd-btn">复制 JD 摘要</button>`;result.classList.add('show');document.querySelector('#copy-jd-btn').addEventListener('click',()=>showToast('JD 摘要已复制（演示）'));showToast('Agent 已生成 JD 草稿');}catch(error){result.innerHTML='<p>Agent 暂时不可用，请检查 Worker API。</p>';result.classList.add('show');}finally{button.disabled=false;button.textContent='✦ 生成 JD 草稿'}
+});
+async function assessFromDrawer(d){
+  try{const data=await callAgent('/api/assess',{role:d.meta.split(' · ')[0],resume:`${d.name}，${d.note}。有数据平台架构、数据治理、团队协作项目经历。`});const evidence=data.result.evidence.map(item=>`<span>✓ ${item.requirement}：${item.support}</span>`).join('');const list=document.querySelector('.evidence-list');if(list)list.innerHTML=evidence;}catch(error){console.warn('assessment unavailable',error)}
+}
+const originalOpenDrawer=openDrawer;openDrawer=function(d){originalOpenDrawer(d);assessFromDrawer(d)};
+loadOverview();

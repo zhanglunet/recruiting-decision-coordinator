@@ -1,0 +1,13 @@
+{
+  "name": "recruiting-decision-coordinator",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "wrangler check startup && node --check worker/index.js && node --check ui/app.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.125.0"
+  }
+}

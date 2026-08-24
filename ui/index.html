@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#f4f0e8" />
     <title>招聘指挥台 · Recruiting Decision Coordinator</title>
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./mvp.css" />
   </head>
   <body>
     <div class="app-shell">
@@ -56,10 +57,10 @@
           </div>
 
           <div class="metric-grid">
-            <article class="metric-card"><div class="metric-top"><span>开放岗位</span><span class="metric-icon yellow">▤</span></div><strong>12</strong><div class="metric-foot"><span class="trend up">↗ 2</span><span>较上周</span></div></article>
-            <article class="metric-card accent-card"><div class="metric-top"><span>待筛选简历</span><span class="metric-icon ink">◎</span></div><strong>86</strong><div class="metric-foot"><span class="trend warn">需要处理</span><span>最高优先级</span></div></article>
-            <article class="metric-card"><div class="metric-top"><span>本周面试</span><span class="metric-icon coral">◷</span></div><strong>18</strong><div class="metric-foot"><span class="trend up">↗ 24%</span><span>较上周</span></div></article>
-            <article class="metric-card"><div class="metric-top"><span>待审批动作</span><span class="metric-icon mint">✓</span></div><strong>6</strong><div class="metric-foot"><span class="trend neutral">今日截止</span><span>需要你决定</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span>开放岗位</span><span class="metric-icon yellow">▤</span></div><strong id="metric-open-roles">12</strong><div class="metric-foot"><span class="trend up">↗ 2</span><span>较上周</span></div></article>
+            <article class="metric-card accent-card"><div class="metric-top"><span>待筛选简历</span><span class="metric-icon ink">◎</span></div><strong id="metric-candidates">86</strong><div class="metric-foot"><span class="trend warn">需要处理</span><span>最高优先级</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span>本周面试</span><span class="metric-icon coral">◷</span></div><strong id="metric-interviews">18</strong><div class="metric-foot"><span class="trend up">↗ 24%</span><span>较上周</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span>待审批动作</span><span class="metric-icon mint">✓</span></div><strong id="metric-decisions">6</strong><div class="metric-foot"><span class="trend neutral">今日截止</span><span>需要你决定</span></div></article>
           </div>
 
           <div class="content-grid">
@@ -79,6 +80,7 @@
     </div>
 
     <div class="drawer-backdrop" id="drawer-backdrop"></div><aside class="candidate-drawer" id="candidate-drawer" aria-label="候选人详情"><button class="drawer-close" id="drawer-close" aria-label="关闭">×</button><div id="drawer-content"></div></aside>
+    <div class="modal-backdrop" id="jd-modal-backdrop"><section class="action-modal" role="dialog" aria-modal="true" aria-labelledby="jd-modal-title"><button class="drawer-close" id="jd-modal-close" aria-label="关闭">×</button><p class="eyebrow">岗位定义 · Agent Skill</p><h2 id="jd-modal-title">生成可确认 JD</h2><p class="modal-note">把业务方的原始描述交给 Agent，先生成岗位假设，再由负责人确认必要条件。</p><label>岗位名称<input id="jd-title-input" placeholder="例如：数据架构师" /></label><label>原始需求描述<textarea id="jd-description-input" rows="5" placeholder="粘贴岗位职责、特殊要求或业务方原话"></textarea></label><div class="modal-actions"><button class="outline-btn" id="jd-modal-cancel">取消</button><button class="primary-btn" id="jd-generate-btn">✦ 生成 JD 草稿</button></div><div class="api-result" id="jd-result"></div></section></div>
     <div class="toast" id="toast" role="status"><span>✓</span><p></p></div>
     <script src="./app.js"></script>
   </body>
