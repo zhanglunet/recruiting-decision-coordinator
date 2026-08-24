@@ -26,13 +26,36 @@ async function enterpriseChat(env, messages) {
   const apiKey = provider === 'glm' ? env.GLM_API_KEY : env.ENTERPRISE_API_KEY;
   if (!apiKey) return null;
   const base = String(env.MODEL_BASE_URL || (provider === 'glm' ? 'https://open.bigmodel.cn/api/coding/paas/v4' : 'https://aigw.asiainfo.com/v1')).replace(/\/$/, '');
+  const useStream = provider === 'glm';
   const response = await fetch(`${base}/chat/completions`, {
     method: 'POST',
     headers: { accept: 'application/json', authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ model: env.MODEL_NAME || (provider === 'glm' ? 'glm-5.2' : 'wangsu/gpt-5.5'), messages, stream: false, temperature: 0.2 }),
-    signal: AbortSignal.timeout(15000)
+    body: JSON.stringify({ model: env.MODEL_NAME || (provider === 'glm' ? 'glm-5.2' : 'wangsu/gpt-5.5'), messages, stream: useStream, temperature: 0.2, max_tokens: 1400, ...(provider === 'glm' ? { thinking: { type: 'disabled' } } : {}) }),
+    signal: AbortSignal.timeout(20000)
   });
   if (!response.ok) throw new Error(`enterprise_model_${response.status}`);
+  if (useStream && response.body) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let content = '';
+    let model = env.MODEL_NAME || 'glm-5.2';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        try { const chunk = JSON.parse(payload); model = chunk.model || model; content += chunk.choices?.[0]?.delta?.content || ''; } catch {}
+      }
+    }
+    if (!content) throw new Error('enterprise_model_empty');
+    return { content, model, provider };
+  }
   const data = await response.json();
   const content = data?.choices?.[0]?.message?.content;
   if (!content) throw new Error('enterprise_model_empty');
