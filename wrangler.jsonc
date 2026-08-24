@@ -6,7 +6,7 @@
   "vars": {
     "MODEL_PROVIDER": "glm",
     "MODEL_BASE_URL": "https://open.bigmodel.cn/api/coding/paas/v4",
-    "MODEL_NAME": "glm-5.2"
+    "MODEL_NAME": "glm-5.3"
   },
   "assets": {
     "directory": "./ui",

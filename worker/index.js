@@ -30,7 +30,7 @@ async function enterpriseChat(env, messages) {
   const response = await fetch(`${base}/chat/completions`, {
     method: 'POST',
     headers: { accept: 'application/json', authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ model: env.MODEL_NAME || (provider === 'glm' ? 'glm-5.2' : 'wangsu/gpt-5.5'), messages, stream: useStream, temperature: 0.2, max_tokens: 1400, ...(provider === 'glm' ? { thinking: { type: 'disabled' } } : {}) }),
+    body: JSON.stringify({ model: env.MODEL_NAME || (provider === 'glm' ? 'glm-5.3' : 'wangsu/gpt-5.5'), messages, stream: useStream, temperature: 0.2, max_tokens: 1400, ...(provider === 'glm' ? { thinking: { type: 'disabled' } } : {}) }),
     signal: AbortSignal.timeout(20000)
   });
   if (!response.ok) throw new Error(`enterprise_model_${response.status}`);
@@ -39,7 +39,7 @@ async function enterpriseChat(env, messages) {
     const decoder = new TextDecoder();
     let buffer = '';
     let content = '';
-    let model = env.MODEL_NAME || 'glm-5.2';
+    let model = env.MODEL_NAME || 'glm-5.3';
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
@@ -59,7 +59,7 @@ async function enterpriseChat(env, messages) {
   const data = await response.json();
   const content = data?.choices?.[0]?.message?.content;
   if (!content) throw new Error('enterprise_model_empty');
-  return { content, model: data.model || env.MODEL_NAME || (provider === 'glm' ? 'glm-5.2' : 'wangsu/gpt-5.5'), provider };
+  return { content, model: data.model || env.MODEL_NAME || (provider === 'glm' ? 'glm-5.3' : 'wangsu/gpt-5.5'), provider };
 }
 
 function parseModelJson(content) {
@@ -106,7 +106,7 @@ function buildInterview(input) {
 
 async function api(request, url, env) {
   if (request.method === 'GET' && url.pathname === '/api/health') return json({ ok: true, service: 'recruiting-decision-coordinator', version: '0.1.0-mvp' });
-  if (request.method === 'GET' && url.pathname === '/api/model-status') { const provider = String(env.MODEL_PROVIDER || 'glm').toLowerCase(); return json({ configured: Boolean(provider === 'glm' ? env.GLM_API_KEY : env.ENTERPRISE_API_KEY), provider, baseUrl: env.MODEL_BASE_URL || (provider === 'glm' ? 'https://open.bigmodel.cn/api/coding/paas/v4' : 'https://aigw.asiainfo.com/v1'), model: env.MODEL_NAME || (provider === 'glm' ? 'glm-5.2' : 'wangsu/gpt-5.5'), secretName: provider === 'glm' ? 'GLM_API_KEY' : 'ENTERPRISE_API_KEY' }); }
+  if (request.method === 'GET' && url.pathname === '/api/model-status') { const provider = String(env.MODEL_PROVIDER || 'glm').toLowerCase(); return json({ configured: Boolean(provider === 'glm' ? env.GLM_API_KEY : env.ENTERPRISE_API_KEY), provider, baseUrl: env.MODEL_BASE_URL || (provider === 'glm' ? 'https://open.bigmodel.cn/api/coding/paas/v4' : 'https://aigw.asiainfo.com/v1'), model: env.MODEL_NAME || (provider === 'glm' ? 'glm-5.3' : 'wangsu/gpt-5.5'), secretName: provider === 'glm' ? 'GLM_API_KEY' : 'ENTERPRISE_API_KEY' }); }
   if (request.method === 'GET' && url.pathname === '/api/overview') return json({ metrics: { openRoles: demoRoles.length, pendingCandidates: 86, weeklyInterviews: 18, pendingDecisions: 6 }, roles: demoRoles, candidates: demoCandidates, decisions: [
     { type: 'candidate', candidateId: 'candidate-linxiao', title: '林晓', meta: '数据架构师 · 匹配度 92%', action: '查看证据' },
     { type: 'role', title: '数据架构师', meta: 'JD 草稿 · 技术平台部', action: '审阅建议' },
