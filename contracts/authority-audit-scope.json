@@ -1,0 +1,55 @@
+{
+  "version": "0.1.0",
+  "purpose": "Enumerate stable rule families that a Source Gate pass must audit; this file does not authorize the rules it lists.",
+  "rules": [
+    {
+      "rule_id": "consumer-decision-responsibility",
+      "rule_family": "招聘人员／HRBP 为主要消费者；用人部门保留专业录用责任，招聘人员保留流程与合规责任。",
+      "business_effect": "决定首版输出消费者、推进责任和最终人员决定边界。",
+      "source_kind": "user-confirmed",
+      "source_reference": "DESIGN_CONTEXT.md DEC-0003"
+    },
+    {
+      "rule_id": "high-impact-human-gate",
+      "rule_family": "批准规则内的邀约、改约和提醒可自动发送；淘汰、面试结果、薪资和 offer 必须人工确认。",
+      "business_effect": "决定自动外发范围、高影响消息和流程状态的人工门。",
+      "source_kind": "user-confirmed",
+      "source_reference": "DESIGN_CONTEXT.md DEC-0004"
+    },
+    {
+      "rule_id": "runtime-standard-authority",
+      "rule_family": "正式标准必须具有身份、来源、版本或生效状态、适用范围和责任人；缺失、过期或冲突时停止受影响判断。",
+      "business_effect": "决定 JD、候选分项判断和正式面试锚点的效力。",
+      "source_kind": "reversible-design-default",
+      "source_reference": "Grounding Gate 通过的 runtime-input-only 权威契约"
+    },
+    {
+      "rule_id": "aggregation-authorization",
+      "rule_family": "无有权聚合规则、确定性评分服务、解释和人工复核入口时，不生成正式总分、等级、排序或淘汰建议。",
+      "business_effect": "防止模型自行创设候选评级并改变招聘推进决定。",
+      "source_kind": "reversible-design-default",
+      "source_reference": "用户确认的责任边界与 runtime-input-only 标准模式"
+    },
+    {
+      "rule_id": "fair-screening-boundary",
+      "rule_family": "与岗位内在要求无关的地域、性别、婚育、年龄和代理条件不得用于筛选或排序。",
+      "business_effect": "限制候选筛选依据，避免不公平条件被规模化执行。",
+      "source_kind": "formal-material",
+      "source_reference": "DESIGN_CONTEXT.md 记录的个人信息保护法、就业促进法和指导案例185号"
+    },
+    {
+      "rule_id": "platform-evidence-boundary",
+      "rule_family": "未接入 Tool 和未运行评测不得被声明为真实平台能力、模型行为、性能或业务效果。",
+      "business_effect": "限制运行、安装激活、性能和业务效果声明。",
+      "source_kind": "verified-platform-fact",
+      "source_reference": "当前环境无目标平台连接、真实返回或目标模型运行"
+    },
+    {
+      "rule_id": "source-gate-packaging-authority",
+      "rule_family": "只有完整审计全部已知稳定规则且绑定当前冻结快照的隔离 Source Gate pass 才可进入打包。",
+      "business_effect": "决定完整源码能否进入终结器并生成可安装 ZIP。",
+      "source_kind": "formal-material",
+      "source_reference": "review-enterprise-agent isolated-review-contract.md"
+    }
+  ]
+}

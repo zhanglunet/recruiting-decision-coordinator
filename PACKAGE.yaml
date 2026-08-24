@@ -1,0 +1,25 @@
+package_name: recruiting-decision-coordinator
+display_name: 招聘决策与协同助手
+version: 0.1.0
+language: zh-CN
+form: enterprise_domain_agent
+primary_consumer: recruiter_or_hrbp
+entrypoint: SYSTEM_PROMPT.md
+runtime_contract: contracts/runtime-integrations.md
+authority_audit_scope: contracts/authority-audit-scope.json
+skills:
+  - name: shape-job-and-publishing
+    path: skills/shape-job-and-publishing/SKILL.md
+  - name: assess-candidate-evidence
+    path: skills/assess-candidate-evidence/SKILL.md
+  - name: design-structured-interview
+    path: skills/design-structured-interview/SKILL.md
+evaluation_cases: evaluation/cases.json
+validation: scripts/validate.py
+source_freezer: scripts/freeze_source.py
+source_receipt_validator: scripts/validate_source_receipt.py
+packager: scripts/package_release.py
+installer: scripts/install_local.py
+tool_evidence_status: none
+behavior_evidence: designed_not_run
+platform_adapter_included: false
