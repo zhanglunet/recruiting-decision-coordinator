@@ -29,7 +29,8 @@ async function enterpriseChat(env, messages) {
   const response = await fetch(`${base}/chat/completions`, {
     method: 'POST',
     headers: { accept: 'application/json', authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ model: env.MODEL_NAME || (provider === 'glm' ? 'glm-5.2' : 'wangsu/gpt-5.5'), messages, stream: false, temperature: 0.2 })
+    body: JSON.stringify({ model: env.MODEL_NAME || (provider === 'glm' ? 'glm-5.2' : 'wangsu/gpt-5.5'), messages, stream: false, temperature: 0.2 }),
+    signal: AbortSignal.timeout(15000)
   });
   if (!response.ok) throw new Error(`enterprise_model_${response.status}`);
   const data = await response.json();
@@ -98,7 +99,7 @@ async function api(request, url, env) {
       const result = model && parseModelJson(model.content);
       if (result) return json({ ok: true, mode: 'model', model: model.model, result, receipt: { kind: 'draft', createdAt: new Date().toISOString() } });
       if (model) fallback.modelNote = model.content;
-    } catch (error) { fallback.modelError = error.message; }
+    } catch (error) { fallback.modelError = error.name === 'TimeoutError' ? 'enterprise_model_timeout' : error.message; }
     return json({ ok: true, mode: 'fallback', result: fallback, receipt: { kind: 'draft', createdAt: new Date().toISOString() } });
   }
   if (url.pathname === '/api/assess') {
@@ -108,7 +109,7 @@ async function api(request, url, env) {
       const result = model && parseModelJson(model.content);
       if (result) return json({ ok: true, mode: 'model', model: model.model, result, receipt: { kind: 'evidence-assessment', createdAt: new Date().toISOString() } });
       if (model) fallback.modelNote = model.content;
-    } catch (error) { fallback.modelError = error.message; }
+    } catch (error) { fallback.modelError = error.name === 'TimeoutError' ? 'enterprise_model_timeout' : error.message; }
     return json({ ok: true, mode: 'fallback', result: fallback, receipt: { kind: 'evidence-assessment', createdAt: new Date().toISOString() } });
   }
   if (url.pathname === '/api/interview') {
@@ -118,7 +119,7 @@ async function api(request, url, env) {
       const result = model && parseModelJson(model.content);
       if (result) return json({ ok: true, mode: 'model', model: model.model, result, receipt: { kind: 'question-pack-draft', createdAt: new Date().toISOString() } });
       if (model) fallback.modelNote = model.content;
-    } catch (error) { fallback.modelError = error.message; }
+    } catch (error) { fallback.modelError = error.name === 'TimeoutError' ? 'enterprise_model_timeout' : error.message; }
     return json({ ok: true, mode: 'fallback', result: fallback, receipt: { kind: 'question-pack-draft', createdAt: new Date().toISOString() } });
   }
   return json({ error: 'not_found' }, 404);
